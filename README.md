@@ -26,3 +26,7 @@ ai-commit
 # 支持增加额外参数的 git diff 参数
 ai-commit --staged
 ```
+
+# 4. 许可
+
+MIT
