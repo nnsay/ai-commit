@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
@@ -15,13 +16,13 @@ import (
 func getScopeNames() string {
 	scopes := ""
 	_, err := os.Stat("./nx.json")
-	if err != nil {
-		scopeCmd := exec.Command("npx", "nx", "show", "projects", "|", "xargs")
+	if err == nil {
+		scopeCmd := exec.Command("npx", "nx", "show", "projects")
 		scopeOut, err := scopeCmd.Output()
 		if err != nil {
 			return scopes
 		}
-		scopes = string(scopeOut)
+		scopes = strings.ReplaceAll(string(scopeOut), "\n", " ")
 	}
 	return scopes
 }
@@ -49,7 +50,10 @@ func main() {
 	restriction1 := "1. 符合约定式提交的格式, 如: <type>: <description>\n其中type的合法值有:fix feat chore docs build ci style refactor perf test"
 	names := getScopeNames()
 	if len(names) > 0 {
-		restriction1 = fmt.Sprintf("1. 符合约定式提交的格式, 如: <type>[optional scope]: <description> \n其中scope的合法值有: %s", names)
+		restriction1 = fmt.Sprintf(`1. 符合约定式提交的格式, 如: <type>[optional scope]: <description>
+	其中type的合法值有:fix feat chore docs build ci style refactor perf test
+	其中scope的合法值有: %s`,
+			names)
 	}
 	question := fmt.Sprintf(`请根据下面的git diff结果, 编写一条commit信息, 编写要求有:
 %s
@@ -58,6 +62,7 @@ func main() {
 git diff 结果如下:
 %s
 `, restriction1, diffText)
+	fmt.Println(question)
 	resp, err := model.GenerateContent(ctx, genai.Text(question))
 	if err != nil {
 		log.Fatal(err)
