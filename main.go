@@ -57,5 +57,5 @@ git diff 结果如下:
 		log.Fatal(err)
 	}
 	commitMsg := resp.Candidates[0].Content.Parts[0]
-	log.Println(commitMsg)
+	fmt.Println(commitMsg)
 }
