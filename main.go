@@ -47,7 +47,7 @@ func main() {
 		return
 	}
 	// question := fmt.Sprintf("请根据下面的git diff结果, 结合nx monorepo的代码组织特点, 编写一条符合约定式提交规则的commit信息: \n%s", diffText)
-	restriction1 := "1. 符合约定式提交的格式, 如: <type>: <description>\n其中type的合法值有:fix feat chore docs build ci style refactor perf test"
+	restriction1 := "1. 符合约定式提交的格式, 如: <type>: <description>\n  其中type的合法值有:fix feat chore docs build ci style refactor perf test"
 	names := getScopeNames()
 	if len(names) > 0 {
 		restriction1 = fmt.Sprintf(`1. 符合约定式提交的格式, 如: <type>[optional scope]: <description>
@@ -62,11 +62,19 @@ func main() {
 git diff 结果如下:
 %s
 `, restriction1, diffText)
-	fmt.Println(question)
+	// fmt.Println(question) // DEBUG
 	resp, err := model.GenerateContent(ctx, genai.Text(question))
 	if err != nil {
 		log.Fatal(err)
 	}
-	commitMsg := resp.Candidates[0].Content.Parts[0]
+	commitMsg := fmt.Sprint(resp.Candidates[0].Content.Parts[0])
+	fmt.Println("AI Commit Message Result:")
+	fmt.Println(commitMsg)
+	var userInput string
+	fmt.Println("Above message is ok? continue or put your custom message at here")
+	fmt.Scanln(&userInput)
+	if userInput != "" && userInput != "y" && userInput != "yes" {
+		commitMsg = userInput
+	}
 	fmt.Println(commitMsg)
 }
