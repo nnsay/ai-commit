@@ -16,7 +16,7 @@ func getScopeNames() string {
 	scopes := ""
 	_, err := os.Stat("./nx.json")
 	if err != nil {
-		scopeCmd := exec.Command("npx", "nx", "show", "projects")
+		scopeCmd := exec.Command("npx", "nx", "show", "projects", "|", "xargs")
 		scopeOut, err := scopeCmd.Output()
 		if err != nil {
 			return scopes
