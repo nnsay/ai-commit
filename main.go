@@ -35,9 +35,16 @@ func main() {
 	defer client.Close()
 
 	model := client.GenerativeModel("gemini-pro")
-	diffCom := exec.Command("git", "diff")
+	diffArgs := []string{"diff"}
+	diffArgs = append(diffArgs, os.Args[1:]...)
+	diffCom := exec.Command("git", diffArgs...)
 	diffOut, _ := diffCom.Output()
 	diffText := string(diffOut)
+
+	if len(diffText) == 0 {
+		fmt.Println("git diff 结果为空, 无法计算")
+		return
+	}
 	// question := fmt.Sprintf("请根据下面的git diff结果, 结合nx monorepo的代码组织特点, 编写一条符合约定式提交规则的commit信息: \n%s", diffText)
 	restriction1 := "1. 符合约定式提交的格式, 如: <type>: <description>\n其中type的合法值有:fix feat chore docs build ci style refactor perf test"
 	names := getScopeNames()
