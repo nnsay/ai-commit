@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -27,6 +28,13 @@ func getScopeNames() string {
 	return scopes
 }
 
+func debugLog(msg string) {
+	isDebug := len(os.Getenv("DEBUG")) > 0
+	if isDebug {
+		fmt.Printf("[DEBUG] %s", msg)
+	}
+}
+
 func main() {
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(os.Getenv("GEMINI_API_KEY")))
@@ -43,16 +51,17 @@ func main() {
 	diffText := string(diffOut)
 
 	if len(diffText) == 0 {
-		fmt.Println("git diff 结果为空, 无法计算")
+		fmt.Println("[ERROR] git diff result is empty")
 		return
 	}
 	// question := fmt.Sprintf("请根据下面的git diff结果, 结合nx monorepo的代码组织特点, 编写一条符合约定式提交规则的commit信息: \n%s", diffText)
 	restriction1 := "1. 符合约定式提交的格式, 如: <type>: <description>\n  其中type的合法值有:fix feat chore docs build ci style refactor perf test"
 	names := getScopeNames()
 	if len(names) > 0 {
-		restriction1 = fmt.Sprintf(`1. 符合约定式提交的格式, 如: <type>[optional scope]: <description>
-	其中type的合法值有:fix feat chore docs build ci style refactor perf test
-	其中scope的合法值有: %s`,
+		restriction1 = fmt.Sprintf(`1. 符合约定式提交的格式, 如: <type>(scope): <description>
+	1.1 其中type的合法值有:fix feat chore docs build ci style refactor perf test
+	1.2 其中scope的合法值有: %s
+	1.3 可能有多个scope时取变更文件最多的scope`,
 			names)
 	}
 	question := fmt.Sprintf(`请根据下面的git diff结果, 编写一条commit信息, 编写要求有:
@@ -62,19 +71,27 @@ func main() {
 git diff 结果如下:
 %s
 `, restriction1, diffText)
-	// fmt.Println(question) // DEBUG
+	debugLog(fmt.Sprintf("question:\n%s\n", question))
 	resp, err := model.GenerateContent(ctx, genai.Text(question))
 	if err != nil {
 		log.Fatal(err)
 	}
 	commitMsg := fmt.Sprint(resp.Candidates[0].Content.Parts[0])
-	fmt.Println("AI Commit Message Result:")
-	fmt.Println(commitMsg)
-	var userInput string
+	fmt.Printf("AI Commit Message Result:\n	%s\n", commitMsg)
+	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Above message is ok? continue or put your custom message at here")
-	fmt.Scanln(&userInput)
+	userInput, _ := reader.ReadString('\n')
 	if userInput != "" && userInput != "y" && userInput != "yes" {
 		commitMsg = userInput
 	}
-	fmt.Println(commitMsg)
+	debugLog(fmt.Sprintf("the commit mssage: %s\n", commitMsg))
+	changeCmd := exec.Command("git", "diff", "--name-only", "--staged")
+	changeFiles, _ := changeCmd.Output()
+	if len(changeFiles) == 0 {
+		debugLog("execute git add because no changes")
+		addCmd := exec.Command("git", "add", ".")
+		addCmd.Run()
+	}
+	commitCmd := exec.Command("git", "commit", "-m", commitMsg)
+	commitCmd.Run()
 }
