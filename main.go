@@ -81,7 +81,7 @@ git diff 结果如下:
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Above message is ok? continue or put your custom message at here")
 	userInput, _ := reader.ReadString('\n')
-	if userInput != "" && userInput != "y" && userInput != "yes" {
+	if userInput != "" && userInput != "y" && userInput != "yes" && userInput != "\n" {
 		commitMsg = userInput
 	}
 	debugLog(fmt.Sprintf("the commit mssage: %s\n", commitMsg))
